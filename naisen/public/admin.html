@@ -1,0 +1,842 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>Dashboard: Naisen</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📊</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Gloock&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/styles.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
+<style>
+  body { font-size: 16px; }
+  .login { max-width: 400px; margin: 12vh auto 0; padding: 0 24px; }
+  .login h1 { font-size: 2.2rem; margin-bottom: 20px; }
+  .login form { display: flex; flex-direction: column; gap: 14px; }
+
+  .top { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px; margin-bottom: 20px; }
+  .top h1 { font-size: clamp(1.8rem, 4vw, 2.4rem); }
+  .top .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+  nav.tabs { display: flex; gap: 4px; border-bottom: 1.5px solid var(--rule-strong); margin-bottom: 28px; overflow-x: auto; }
+  nav.tabs button {
+    appearance: none; background: none; border: none; border-bottom: 3px solid transparent; margin-bottom: -1.5px;
+    font: 600 0.98rem var(--body); color: var(--pencil); padding: 12px 14px; cursor: pointer; white-space: nowrap;
+  }
+  nav.tabs button[aria-selected=true] { color: var(--ink); border-bottom-color: var(--margin); }
+
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  .sheet { background: var(--sheet); border: 1.5px solid var(--rule); border-radius: var(--radius); padding: 20px; }
+  .overview { display: grid; grid-template-columns: minmax(280px, 380px) 1fr; gap: 24px; align-items: start; }
+  table.ledger { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+  table.ledger td { padding: 9px 0; border-bottom: 1px solid var(--rule); }
+  table.ledger td:last-child { text-align: right; font-weight: 600; }
+  table.ledger tr.total td { border-bottom: none; font-family: var(--display); font-size: 1.5rem; font-weight: 400; padding-top: 14px; }
+  table.ledger tr.total td:last-child span { border-bottom: 5px double var(--margin); padding-bottom: 2px; color: var(--accent); }
+  table.ledger tr.gap td { border: none; padding: 8px 0; }
+  .rate { margin-top: 18px; }
+  .bar { height: 10px; background: var(--paper-deep); border-radius: 5px; overflow: hidden; margin-top: 8px; }
+  .bar > div { height: 100%; background: var(--margin); border-radius: 5px; }
+
+  .charts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+  .chart h3 { font-family: var(--body); font-weight: 600; font-size: 1rem; margin-bottom: 12px; }
+  .chart .canvas { position: relative; height: 240px; }
+  .chart .empty-note { color: var(--pencil); font-size: 0.92rem; }
+
+  .toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 18px; }
+  .toolbar select, .toolbar input { width: auto; min-width: 150px; }
+  .toolbar input[type=search] { flex: 1 1 240px; }
+  .toolbar .spacer { flex: 1; }
+
+  .cloud-layout { display: grid; grid-template-columns: 1fr 260px; gap: 20px; align-items: start; }
+  .cloud { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 4px 14px; min-height: 360px; padding: 28px 20px; }
+  .cloud button { appearance: none; background: none; border: none; padding: 0 2px; font-family: var(--display); line-height: 1.1; cursor: pointer; color: var(--ink); }
+  .cloud button:hover { text-decoration: underline; text-decoration-color: var(--margin); text-decoration-thickness: 2px; }
+  .cloud button[aria-pressed=true] { text-decoration: underline double var(--margin); }
+  ol.top-words { margin: 0; padding: 0; list-style: none; }
+  ol.top-words li { display: flex; justify-content: space-between; gap: 8px; padding: 4px 0; border-bottom: 1px solid var(--rule); font-variant-numeric: tabular-nums; }
+  .matches { margin-top: 20px; }
+  .match { padding: 12px 0; border-bottom: 1px solid var(--rule); }
+  .match small { color: var(--pencil); display: block; margin-bottom: 2px; }
+  mark { background: #DCEFE9; color: inherit; padding: 0 2px; border-radius: 2px; }
+
+  .entry { margin-bottom: 16px; }
+  .entry-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px; align-items: flex-start; border-bottom: 1px solid var(--rule); padding-bottom: 12px; margin-bottom: 12px; }
+  .entry-head h3 { font-size: 1.3rem; }
+  .entry-head .meta { color: var(--pencil); font-size: 0.9rem; margin-top: 2px; }
+  .entry-head .tools { display: flex; gap: 6px; flex-wrap: wrap; }
+  .pill { display: inline-block; font-size: 0.78rem; font-weight: 600; padding: 2px 8px; border-radius: 99px; background: var(--paper-deep); color: var(--ink-soft); margin-right: 6px; }
+  .qa { margin: 0 0 12px; }
+  .qa small { display: block; color: var(--pencil); font-size: 0.85rem; }
+  .qa p { margin: 2px 0 0; white-space: pre-line; max-width: 80ch; }
+  .btn.star[aria-pressed=true], .btn.star[aria-pressed=true]:hover { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+  .photo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+  .photo-grid.small { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; margin-top: 8px; }
+  .ph { aspect-ratio: 1; background: var(--paper-deep); border-radius: 4px; overflow: hidden; position: relative; cursor: zoom-in; }
+  .ph img { width: 100%; height: 100%; object-fit: cover; }
+  .ph span { position: absolute; left: 0; right: 0; bottom: 0; background: linear-gradient(transparent, rgba(38,54,60,0.75)); color: #fff; font-size: 0.8rem; padding: 18px 8px 6px; }
+
+  table.plain { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
+  table.plain th, table.plain td { text-align: left; padding: 10px 8px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+  table.plain th { font-weight: 600; color: var(--pencil); }
+  .scroll-x { overflow-x: auto; }
+
+  .share { display: grid; grid-template-columns: 1fr 260px; gap: 24px; align-items: start; }
+  .share .row { display: flex; gap: 8px; margin: 8px 0 20px; }
+  .share .row input { flex: 1; }
+  #qr img { width: 100%; height: auto; image-rendering: pixelated; }
+
+  #keepsake { background: #fff; color: #26363C; }
+  .k-cover { text-align: center; padding: 18vh 24px; page-break-after: always; }
+  .k-cover h1 { font-size: 3rem; margin-bottom: 16px; }
+  .k-entry { padding: 24px 0; border-bottom: 1px solid var(--rule); break-inside: avoid-page; }
+  .k-entry h2 { font-size: 1.5rem; margin-bottom: 4px; }
+  .k-entry .pics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; }
+  .k-entry .pics img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 4px; }
+
+  dialog { border: none; padding: 0; background: transparent; }
+  dialog::backdrop { background: rgba(38, 54, 60, 0.82); }
+  dialog img { max-width: 94vw; max-height: 90vh; border-radius: 4px; }
+
+  @media (max-width: 860px) {
+    .overview, .cloud-layout, .share, .charts { grid-template-columns: 1fr; }
+  }
+  @media print {
+    body.printing > :not(#print-root) { display: none !important; }
+    body.printing #print-root { display: block !important; }
+    .k-entry .pics img { aspect-ratio: auto; max-height: 220px; }
+  }
+</style>
+</head>
+<body>
+<div class="topbar"><div class="inner"><a class="brand" href="/admin" id="brand">Naisen</a><nav><a href="/" target="_blank" rel="noopener">Form</a><a href="/wall" target="_blank" rel="noopener">Memory wall</a></nav></div></div>
+
+<section class="login" id="login">
+  <h1><span class="double">Dashboard</span></h1>
+  <form id="login-form">
+    <label class="field"><span>Admin password</span><input type="password" id="pw" autocomplete="current-password" required></label>
+    <button class="btn" type="submit">Open dashboard</button>
+    <p id="login-error" class="notice hidden" role="alert"></p>
+  </form>
+</section>
+
+<main class="wrap-wide hidden" id="dash">
+  <div class="top">
+    <h1><span class="double" id="dash-title">Dashboard</span></h1>
+    <div class="actions">
+      <button class="btn ghost small-btn" id="refresh">Refresh data</button>
+      <button class="btn ghost small-btn" id="logout">Sign out</button>
+    </div>
+  </div>
+
+  <nav class="tabs" role="tablist">
+    <button role="tab" data-tab="overview" aria-selected="true">Overview</button>
+    <button role="tab" data-tab="clouds" aria-selected="false">Word clouds</button>
+    <button role="tab" data-tab="entries" aria-selected="false">Entries</button>
+    <button role="tab" data-tab="photos" aria-selected="false">Photos</button>
+    <button role="tab" data-tab="contacts" aria-selected="false">Stay in touch</button>
+    <button role="tab" data-tab="keepsake" aria-selected="false">Keepsake</button>
+    <button role="tab" data-tab="share" aria-selected="false">Share</button>
+  </nav>
+
+  <section class="panel active" id="tab-overview">
+    <div class="overview">
+      <div class="sheet">
+        <table class="ledger" id="ledger"></table>
+        <div class="rate">
+          <div id="rate-text"></div>
+          <div class="bar"><div id="rate-bar" style="width:0"></div></div>
+        </div>
+      </div>
+      <div class="charts">
+        <div class="sheet chart"><h3>Entries per day</h3><div class="canvas"><canvas id="c-days"></canvas></div></div>
+        <div class="sheet chart"><h3>Answers per question</h3><div class="canvas"><canvas id="c-questions"></canvas></div></div>
+        <div class="sheet chart"><h3>Named entries by team</h3><div class="canvas"><canvas id="c-teams"></canvas></div></div>
+        <div class="sheet chart"><h3>Named entries by years together</h3><div class="canvas"><canvas id="c-tenure"></canvas></div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel" id="tab-clouds">
+    <div class="toolbar">
+      <select id="cloud-source" aria-label="Question"></select>
+      <select id="cloud-who" aria-label="Who">
+        <option value="all">Everyone</option>
+        <option value="named">Named only</option>
+        <option value="anon">Anonymous only</option>
+      </select>
+      <span class="muted small">Select a word to read every answer that uses it.</span>
+    </div>
+    <div class="cloud-layout">
+      <div class="sheet cloud" id="cloud"></div>
+      <div class="sheet"><h3 style="margin-bottom:10px">Most used</h3><ol class="top-words" id="top-words"></ol></div>
+    </div>
+    <div class="matches" id="matches"></div>
+  </section>
+
+  <section class="panel" id="tab-entries">
+    <div class="toolbar">
+      <input type="search" id="q" placeholder="Search names and answers" aria-label="Search">
+      <select id="f-type" aria-label="Filter">
+        <option value="all">All entries</option>
+        <option value="named">Named</option>
+        <option value="anon">Anonymous</option>
+        <option value="starred">Starred</option>
+        <option value="photos">With photos</option>
+        <option value="wall">On the memory wall</option>
+      </select>
+      <select id="f-team" aria-label="Team"></select>
+      <select id="f-sort" aria-label="Sort">
+        <option value="new">Newest first</option>
+        <option value="old">Oldest first</option>
+        <option value="name">Name A to Z</option>
+      </select>
+      <button class="btn ghost small-btn" id="export-csv">Export CSV</button>
+    </div>
+    <p class="muted small" id="entry-count"></p>
+    <div id="entries"></div>
+  </section>
+
+  <section class="panel" id="tab-photos">
+    <div class="toolbar">
+      <span id="photo-count" class="muted"></span>
+      <span class="spacer"></span>
+      <button class="btn small-btn" id="zip">Download all photos (.zip)</button>
+    </div>
+    <p id="zip-status" class="muted small"></p>
+    <div class="photo-grid" id="all-photos"></div>
+  </section>
+
+  <section class="panel" id="tab-contacts">
+    <div class="toolbar">
+      <span class="muted" id="contact-count"></span>
+      <span class="spacer"></span>
+      <button class="btn ghost small-btn" id="export-contacts">Export contacts CSV</button>
+    </div>
+    <div class="sheet scroll-x"><table class="plain" id="contacts"></table></div>
+  </section>
+
+  <section class="panel" id="tab-keepsake">
+    <div class="sheet" style="max-width:720px">
+      <h2 style="margin-bottom:8px">Print a keepsake</h2>
+      <p class="muted">Builds a printable book of entries and photos. In the print window, choose “Save as PDF” to keep a copy.</p>
+      <label class="check-row"><input type="checkbox" id="k-anon" checked> Include anonymous entries</label><br>
+      <label class="check-row"><input type="checkbox" id="k-photos" checked> Include photos</label><br>
+      <label class="check-row"><input type="checkbox" id="k-starred"> Starred entries only</label><br>
+      <label class="check-row"><input type="checkbox" id="k-private"> Include the private answers (version 2.0 patch, never told me, advice)</label>
+      <div style="margin-top:18px;display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+        <button class="btn" id="k-build">Build and print</button>
+        <span class="muted small" id="k-status"></span>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel" id="tab-share">
+    <div class="share">
+      <div class="sheet">
+        <h2 style="margin-bottom:6px">Share the book</h2>
+        <p class="muted" id="share-info"></p>
+        <label class="small" for="link-form"><strong>Link to the form</strong></label>
+        <div class="row"><input type="text" id="link-form" readonly><button class="btn small-btn" data-copy="link-form">Copy</button></div>
+        <label class="small" for="link-wall" id="wall-label"><strong>Link to the memory wall</strong></label>
+        <div class="row" id="wall-row"><input type="text" id="link-wall" readonly><button class="btn small-btn" data-copy="link-wall">Copy</button></div>
+        <label class="small" for="invite"><strong>Invite message</strong></label>
+        <textarea class="ruled" id="invite" rows="12" style="margin-top:8px"></textarea>
+        <div class="row"><button class="btn ghost small-btn" data-copy="invite">Copy message</button></div>
+      </div>
+      <div class="sheet">
+        <h3 style="margin-bottom:10px">QR code</h3>
+        <div id="qr"></div>
+        <p><a class="btn ghost small-btn" id="qr-dl" download="naisen-qr.gif">Download QR code</a></p>
+      </div>
+    </div>
+  </section>
+</main>
+
+<div id="print-root" class="hidden"></div>
+<dialog id="viewer"><img alt=""></dialog>
+
+<script>
+(() => {
+  const PW_KEY = "naisen-admin-pw";
+  const S = { pw: "", data: null, qs: [], charts: [], urls: new Map(), cloudWord: null };
+  const $ = (s) => document.querySelector(s);
+
+  // Build DOM safely; all user text goes through textContent.
+  function el(tag, attrs = {}, ...kids) {
+    const n = document.createElement(tag);
+    for (const [k, v] of Object.entries(attrs || {})) {
+      if (v == null || v === false) continue;
+      if (k === "class") n.className = v;
+      else if (k === "text") n.textContent = v;
+      else if (k.startsWith("on")) n.addEventListener(k.slice(2), v);
+      else n.setAttribute(k, v === true ? "" : v);
+    }
+    for (const c of kids.flat()) if (c != null && c !== false) n.append(c.nodeType ? c : document.createTextNode(String(c)));
+    return n;
+  }
+
+  function toast(msg) {
+    const t = el("div", { class: "toast", role: "status", text: msg });
+    document.body.append(t);
+    setTimeout(() => t.remove(), 2600);
+  }
+
+  async function api(path, opts = {}) {
+    const res = await fetch(path, { ...opts, headers: { ...(opts.headers || {}), "x-admin-password": S.pw } });
+    if (res.status === 401) { logout("Your session has ended. Enter the password again."); throw new Error("401"); }
+    return res;
+  }
+
+  // ── Login ────────────────────────────────────────────────
+  $("#login-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    S.pw = $("#pw").value;
+    await load(true);
+  });
+  $("#logout").onclick = () => logout();
+  $("#refresh").onclick = async () => { await load(); toast("Data refreshed"); };
+
+  function logout(msg) {
+    try { sessionStorage.removeItem(PW_KEY); } catch {}
+    S.pw = "";
+    $("#dash").classList.add("hidden");
+    $("#login").classList.remove("hidden");
+    const e = $("#login-error");
+    if (msg) { e.textContent = msg; e.classList.remove("hidden"); } else e.classList.add("hidden");
+  }
+
+  async function load(fromLogin) {
+    const err = $("#login-error");
+    try {
+      const res = await fetch("/api/admin", { headers: { "x-admin-password": S.pw } });
+      const out = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(out.error || "The dashboard couldn't load.");
+      S.data = out;
+      S.qs = out.config.questions;
+      try { sessionStorage.setItem(PW_KEY, S.pw); } catch {}
+      $("#login").classList.add("hidden");
+      $("#dash").classList.remove("hidden");
+      renderAll();
+    } catch (e) {
+      if (fromLogin || !S.data) { err.textContent = e.message; err.classList.remove("hidden"); logout(e.message); }
+      else toast(e.message);
+    }
+  }
+
+  // ── Tabs ─────────────────────────────────────────────────
+  document.querySelectorAll("nav.tabs button").forEach((b) => {
+    b.onclick = () => {
+      document.querySelectorAll("nav.tabs button").forEach((x) => x.setAttribute("aria-selected", x === b));
+      document.querySelectorAll(".panel").forEach((p) => p.classList.toggle("active", p.id === `tab-${b.dataset.tab}`));
+    };
+  });
+
+  // ── Helpers ──────────────────────────────────────────────
+  const R = () => S.data.responses;
+  const photosOf = (r) => S.data.photos[r.id] || [];
+  const when = (r) => r.createdAt || `${r.day}T00:00:00Z`;
+  const who = (r) => (r.anonymous ? "Anonymous" : r.name || "Unnamed");
+  const qLabel = (id) => S.qs.find((q) => q.id === id)?.short || id;
+  function fmtDate(r) {
+    if (r.createdAt) return new Date(r.createdAt).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" });
+    return new Date(`${r.day}T12:00:00Z`).toLocaleDateString("en-IN", { dateStyle: "medium" });
+  }
+  function download(name, blob) {
+    const a = el("a", { href: URL.createObjectURL(blob), download: name });
+    document.body.append(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  }
+  function csv(rows) {
+    const esc = (v) => { const s = String(v ?? ""); return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
+    return new Blob(["\uFEFF" + rows.map((r) => r.map(esc).join(",")).join("\r\n")], { type: "text/csv;charset=utf-8" });
+  }
+
+  // Photos are private, so they're fetched with the password and shown as blob URLs.
+  async function photoURL(key) {
+    if (S.urls.has(key)) return S.urls.get(key);
+    const p = api(`/api/photo?key=${encodeURIComponent(key)}`)
+      .then((r) => { if (!r.ok) throw new Error(); return r.blob(); })
+      .then((b) => URL.createObjectURL(b));
+    S.urls.set(key, p);
+    p.catch(() => S.urls.delete(key));
+    return p;
+  }
+  const io = new IntersectionObserver((items) => {
+    items.forEach((it) => {
+      if (!it.isIntersecting) return;
+      io.unobserve(it.target);
+      photoURL(it.target.dataset.key).then((u) => (it.target.src = u)).catch(() => (it.target.alt = "Couldn't load"));
+    });
+  }, { rootMargin: "300px" });
+  function lazyImg(key, caption) {
+    const img = el("img", { alt: caption || "Photo", "data-key": key });
+    io.observe(img);
+    const box = el("div", { class: "ph", onclick: () => { if (img.src) { $("#viewer img").src = img.src; $("#viewer").showModal(); } } }, img);
+    if (caption) box.append(el("span", { text: caption }));
+    return box;
+  }
+  $("#viewer").onclick = () => $("#viewer").close();
+
+  function renderAll() {
+    const app = S.data.config.appName || "Naisen";
+    $("#brand").textContent = app;
+    document.title = `Dashboard: ${app}`;
+    renderOverview();
+    setupClouds();
+    setupEntries();
+    renderPhotos();
+    renderContacts();
+    renderShare();
+  }
+
+  // ── Overview ─────────────────────────────────────────────
+  function renderOverview() {
+    const all = R();
+    const named = all.filter((r) => !r.anonymous).length;
+    const photoTotal = Object.values(S.data.photos).reduce((n, a) => n + a.length, 0);
+    const rows = [
+      ["Named entries", named],
+      ["Anonymous entries", all.length - named],
+      ["total", all.length],
+      ["gap"],
+      ["Photos shared", photoTotal],
+      ["On the memory wall", all.filter((r) => r.showOnWall && !r.hiddenFromWall).length],
+      ["Want to stay in touch", all.filter((r) => r.contact && (r.contact.linkedin || r.contact.email)).length],
+      ["Starred by you", all.filter((r) => r.starred).length],
+    ];
+    const t = $("#ledger");
+    t.innerHTML = "";
+    rows.forEach(([k, v]) => {
+      if (k === "gap") return t.append(el("tr", { class: "gap" }, el("td"), el("td")));
+      if (k === "total") return t.append(el("tr", { class: "total" }, el("td", { text: "Total entries" }), el("td", {}, el("span", { text: v }))));
+      t.append(el("tr", {}, el("td", { text: k }), el("td", { text: v })));
+    });
+    const hc = S.data.config.headcount || 0;
+    const pct = hc ? Math.min(100, (all.length / hc) * 100) : 0;
+    $("#rate-text").textContent = hc ? `${pct.toFixed(1)}% of your ${hc} team members have written in.` : "";
+    $("#rate-bar").style.width = `${pct}%`;
+
+    S.charts.forEach((c) => c.destroy());
+    S.charts = [];
+    if (!window.Chart) return;
+    Chart.defaults.font.family = getComputedStyle(document.body).fontFamily;
+    Chart.defaults.color = "#6E7F84";
+    const ink = "#6FA89A", red = "#8DB6D4";
+
+    const byDay = {};
+    all.forEach((r) => (byDay[r.day] = (byDay[r.day] || 0) + 1));
+    const days = Object.keys(byDay).sort();
+    chart("c-days", "bar", days.map((d) => new Date(`${d}T12:00:00Z`).toLocaleDateString("en-IN", { day: "numeric", month: "short" })), days.map((d) => byDay[d]), ink);
+
+    chart("c-questions", "bar", S.qs.map((q) => q.short || q.id), S.qs.map((q) => all.filter((r) => r.answers?.[q.id]).length), red, true);
+
+    const count = (key) => {
+      const m = {};
+      all.filter((r) => !r.anonymous && r[key]).forEach((r) => (m[r[key]] = (m[r[key]] || 0) + 1));
+      return Object.entries(m).sort((a, b) => b[1] - a[1]).slice(0, 12);
+    };
+    const teams = count("team");
+    chart("c-teams", "bar", teams.map((x) => x[0]), teams.map((x) => x[1]), ink, true);
+    const order = ["Under 1 year", "1–2 years", "3–5 years", "More than 5 years"];
+    const ten = count("tenure").sort((a, b) => order.indexOf(a[0]) - order.indexOf(b[0]));
+    chart("c-tenure", "bar", ten.map((x) => x[0]), ten.map((x) => x[1]), red);
+  }
+
+  function chart(id, type, labels, values, color, horizontal) {
+    const canvas = document.getElementById(id);
+    const box = canvas.parentElement;
+    box.querySelector(".empty-note")?.remove();
+    if (!values.length || values.every((v) => !v)) {
+      canvas.classList.add("hidden");
+      box.append(el("p", { class: "empty-note", text: "Nothing to show yet." }));
+      return;
+    }
+    canvas.classList.remove("hidden");
+    S.charts.push(new Chart(canvas, {
+      type,
+      data: { labels, datasets: [{ data: values, backgroundColor: color, borderRadius: 3, maxBarThickness: 36 }] },
+      options: {
+        indexAxis: horizontal ? "y" : "x",
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          [horizontal ? "x" : "y"]: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: "#EDF2F0" } },
+          [horizontal ? "y" : "x"]: { grid: { display: false } },
+        },
+      },
+    }));
+  }
+
+  // ── Word clouds ──────────────────────────────────────────
+  const STOP = new Set(("a about above after again against all also always am an and any are aren't as at be because been before being below between both but by can can't cannot could couldn't did didn't do does doesn't doing don't down during each even ever every few for from further get got had hadn't has hasn't have haven't having he he'd he'll he's her here here's hers herself him himself his how how's however i i'd i'll i'm i've if in into is isn't it it's its itself just let's like lot lots made make many me might more most much must mustn't my myself need never no nor not now of off on once one only or other ought our ours ourselves out over own really same shan't she she'd she'll she's should shouldn't so some such than that that's the their theirs them themselves then there there's these they they'd they'll they're they've thing things this those though through to too under until up upon us very was wasn't way we we'd we'll we're we've well were weren't what what's when when's where where's which while who who's whom why why's will with within without won't would wouldn't yes yet you you'd you'll you're you've your yours yourself yourselves also sir mam ma'am etc still would've could've should've i'd've even always get gets got go going gone went come came take took say said tell told know knew think thought want wanted see saw time times day days year years one two three first last back much many really quite bit little lot able each every way ways something anything everything nothing someone everyone anyone").split(" "));
+  function stopWords() {
+    const s = new Set(STOP);
+    (S.data.config.leaderName || "").toLowerCase().split(/\s+/).forEach((w) => w && s.add(w) && s.add(`${w}'s`));
+    return s;
+  }
+  const norm = (t) => t.toLowerCase().normalize("NFKC").replace(/[’‘]/g, "'");
+  function tokens(text, stop) {
+    return norm(text).replace(/[^\p{L}\p{N}'\s-]/gu, " ").split(/\s+/)
+      .map((w) => w.replace(/^['-]+|['-]+$/g, "").replace(/'s$/, ""))
+      .filter((w) => w.length > 2 && !stop.has(w) && !/^\d+$/.test(w));
+  }
+  const phrase = (text) => norm(text).replace(/^[\s"'“”.,!?…-]+|[\s"'“”.,!?…-]+$/g, "").replace(/\s+/g, " ");
+
+  function setupClouds() {
+    const sel = $("#cloud-source");
+    const prev = sel.value;
+    sel.innerHTML = "";
+    sel.append(el("option", { value: "all", text: "All answers" }));
+    S.qs.forEach((q) => sel.append(el("option", { value: q.id, text: q.short || q.label })));
+    const word = S.qs.find((q) => q.kind === "word");
+    sel.value = prev || (word ? word.id : "all");
+    sel.onchange = $("#cloud-who").onchange = () => { S.cloudWord = null; renderCloud(); };
+    renderCloud();
+  }
+
+  function cloudInput() {
+    const src = $("#cloud-source").value, whoSel = $("#cloud-who").value;
+    const rs = R().filter((r) => whoSel === "all" || (whoSel === "named" ? !r.anonymous : r.anonymous));
+    const qs = src === "all" ? S.qs : S.qs.filter((q) => q.id === src);
+    const asPhrase = src !== "all" && qs[0] && qs[0].kind !== "long";
+    return { rs, qs, asPhrase };
+  }
+
+  function renderCloud() {
+    const { rs, qs, asPhrase } = cloudInput();
+    const stop = stopWords();
+    const freq = new Map();
+    rs.forEach((r) => qs.forEach((q) => {
+      const t = r.answers?.[q.id];
+      if (!t) return;
+      const items = asPhrase ? [phrase(t)].filter(Boolean) : [...new Set(tokens(t, stop))];
+      items.forEach((w) => freq.set(w, (freq.get(w) || 0) + 1));
+    }));
+    const top = [...freq.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).slice(0, 70);
+
+    const cloud = $("#cloud");
+    cloud.innerHTML = "";
+    const list = $("#top-words");
+    list.innerHTML = "";
+    $("#matches").innerHTML = "";
+    if (!top.length) { cloud.append(el("p", { class: "muted", text: "No answers to this question yet." })); return; }
+
+    const max = top[0][1], min = top[top.length - 1][1];
+    const size = (c) => max === min ? 34 : 15 + Math.sqrt((c - min) / (max - min)) * 49;
+    const colors = ["#4B5E64", "#6FA89A", "#7FA3C0", "#9A8C73"];
+    // Biggest words in the middle, smaller ones fanning out on both sides.
+    const arranged = [];
+    top.forEach((item, i) => (i % 2 ? arranged.push(item) : arranged.unshift(item)));
+    arranged.forEach(([w, c]) => {
+      const rank = top.findIndex((x) => x[0] === w);
+      const b = el("button", {
+        type: "button", text: w, title: `${c} ${c === 1 ? "mention" : "mentions"}`,
+        "aria-pressed": S.cloudWord === w ? "true" : "false",
+        onclick: () => { S.cloudWord = S.cloudWord === w ? null : w; renderCloud(); },
+      });
+      b.style.fontSize = `${size(c).toFixed(1)}px`;
+      b.style.color = rank < 5 ? "#3F7A6C" : colors[rank % colors.length];
+      cloud.append(b);
+    });
+    top.slice(0, 15).forEach(([w, c]) => list.append(el("li", {}, el("span", { text: w }), el("span", { text: c }))));
+    if (S.cloudWord) renderMatches(S.cloudWord, rs, qs, asPhrase, stop);
+  }
+
+  function highlight(text, word) {
+    const frag = document.createDocumentFragment();
+    const re = new RegExp(`(${word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`, "giu");
+    text.split(re).forEach((part, i) => frag.append(i % 2 ? el("mark", { text: part }) : document.createTextNode(part)));
+    return frag;
+  }
+
+  function renderMatches(word, rs, qs, asPhrase, stop) {
+    const host = $("#matches");
+    const hits = [];
+    rs.forEach((r) => qs.forEach((q) => {
+      const t = r.answers?.[q.id];
+      if (!t) return;
+      const ok = asPhrase ? phrase(t) === word : tokens(t, stop).includes(word);
+      if (ok) hits.push({ r, q, t });
+    }));
+    host.append(el("h3", { text: `“${word}” appears in ${hits.length} ${hits.length === 1 ? "answer" : "answers"}` }));
+    const box = el("div", { class: "sheet", style: "margin-top:12px" });
+    hits.forEach(({ r, q, t }) => box.append(el("div", { class: "match" }, el("small", { text: `${who(r)}, ${q.short || q.id}` }), el("p", { style: "margin:0;white-space:pre-line" }, highlight(t, word)))));
+    host.append(box);
+  }
+
+  // ── Entries ──────────────────────────────────────────────
+  function setupEntries() {
+    const teamSel = $("#f-team");
+    const prev = teamSel.value;
+    const teams = [...new Set(R().filter((r) => !r.anonymous && r.team).map((r) => r.team))].sort();
+    teamSel.innerHTML = "";
+    teamSel.append(el("option", { value: "", text: "All teams" }));
+    teams.forEach((t) => teamSel.append(el("option", { value: t, text: t })));
+    teamSel.value = teams.includes(prev) ? prev : "";
+    ["#q", "#f-type", "#f-team", "#f-sort"].forEach((s) => ($(s).oninput = renderEntries));
+    renderEntries();
+  }
+
+  function filtered() {
+    const q = $("#q").value.trim().toLowerCase();
+    const type = $("#f-type").value, team = $("#f-team").value, sort = $("#f-sort").value;
+    let list = R().filter((r) => {
+      if (type === "named" && r.anonymous) return false;
+      if (type === "anon" && !r.anonymous) return false;
+      if (type === "starred" && !r.starred) return false;
+      if (type === "photos" && !photosOf(r).length) return false;
+      if (type === "wall" && !(r.showOnWall && !r.hiddenFromWall)) return false;
+      if (team && r.team !== team) return false;
+      if (q) {
+        const hay = [r.name, r.role, r.team, ...Object.values(r.answers || {})].join(" ").toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+      return true;
+    });
+    list.sort((a, b) =>
+      sort === "name" ? who(a).localeCompare(who(b)) :
+      sort === "old" ? when(a).localeCompare(when(b)) : when(b).localeCompare(when(a)));
+    return list;
+  }
+
+  function renderEntries() {
+    const list = filtered();
+    $("#entry-count").textContent = `Showing ${list.length} of ${R().length} entries`;
+    const host = $("#entries");
+    host.innerHTML = "";
+    if (!R().length) { host.append(el("p", { class: "notice", text: "No entries yet. Share the link from the Share tab to start collecting them." })); return; }
+    list.forEach((r) => host.append(entryCard(r)));
+  }
+
+  function entryCard(r) {
+    const meta = r.anonymous ? [] : [r.role, r.team, r.tenure].filter(Boolean);
+    const pills = [];
+    if (r.showOnWall) pills.push(el("span", { class: "pill", text: r.hiddenFromWall ? "Hidden from wall" : "On the wall" }));
+    const star = el("button", {
+      class: "btn ghost small-btn star", type: "button", "aria-pressed": r.starred ? "true" : "false",
+      text: r.starred ? "★ Starred" : "☆ Star", onclick: () => act(r, "star", !r.starred),
+    });
+    const tools = el("div", { class: "tools" }, star);
+    if (r.showOnWall) tools.append(el("button", { class: "btn ghost small-btn", type: "button", text: r.hiddenFromWall ? "Show on wall" : "Hide from wall", onclick: () => act(r, "hide", !r.hiddenFromWall) }));
+    tools.append(el("button", { class: "btn danger small-btn", type: "button", text: "Delete", onclick: () => {
+      if (confirm(`Delete this entry from ${who(r)} and its photos? This can't be undone.`)) act(r, "delete");
+    } }));
+
+    const card = el("article", { class: "sheet entry" },
+      el("div", { class: "entry-head" },
+        el("div", {},
+          el("h3", { text: who(r) }),
+          el("div", { class: "meta" }, [...meta, fmtDate(r)].join(", ")),
+          pills.length ? el("div", { style: "margin-top:6px" }, pills) : null),
+        tools));
+
+    S.qs.forEach((q) => {
+      const t = r.answers?.[q.id];
+      if (t) card.append(el("div", { class: "qa" }, el("small", { text: q.label }), el("p", { text: t })));
+    });
+    if (r.contact && (r.contact.linkedin || r.contact.email)) {
+      const c = el("div", { class: "qa" }, el("small", { text: "Stay in touch" }));
+      const p = el("p");
+      if (r.contact.linkedin) p.append(el("a", { href: safeUrl(r.contact.linkedin), target: "_blank", rel: "noopener", text: "LinkedIn" }));
+      if (r.contact.linkedin && r.contact.email) p.append(", ");
+      if (r.contact.email) p.append(el("a", { href: `mailto:${r.contact.email}`, text: r.contact.email }));
+      c.append(p); card.append(c);
+    }
+    const ph = photosOf(r);
+    if (ph.length) card.append(el("div", { class: "photo-grid small" }, ph.map((k) => lazyImg(k))));
+    return card;
+  }
+
+  const safeUrl = (u) => (/^https?:\/\//i.test(u) ? u : `https://${u}`);
+
+  async function act(r, action, value) {
+    try {
+      const res = await api("/api/admin", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ action, id: r.id, value }) });
+      const out = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(out.error || "That change didn't save.");
+      if (action === "delete") {
+        S.data.responses = R().filter((x) => x.id !== r.id);
+        delete S.data.photos[r.id];
+        toast("Entry deleted");
+      } else {
+        Object.assign(r, out.record);
+        toast(action === "star" ? (r.starred ? "Starred" : "Star removed") : r.hiddenFromWall ? "Hidden from the wall" : "Shown on the wall");
+      }
+      const y = window.scrollY;
+      renderOverview(); renderEntries(); renderPhotos(); renderContacts(); renderCloud();
+      window.scrollTo(0, y);
+    } catch (e) { if (e.message !== "401") toast(e.message); }
+  }
+
+  $("#export-csv").onclick = () => {
+    const head = ["Date", "Anonymous", "Name", "Role", "Team", "Years together", ...S.qs.map((q) => q.short || q.label), "Photos", "Memory wall", "Starred", "LinkedIn", "Email"];
+    const rows = filtered().map((r) => [
+      r.createdAt || r.day, r.anonymous ? "Yes" : "No", r.name, r.role, r.team, r.tenure,
+      ...S.qs.map((q) => r.answers?.[q.id] || ""),
+      photosOf(r).length, r.showOnWall ? (r.hiddenFromWall ? "Opted in, hidden" : "Yes") : "No", r.starred ? "Yes" : "No",
+      r.contact?.linkedin, r.contact?.email,
+    ]);
+    download(`naisen-entries-${new Date().toISOString().slice(0, 10)}.csv`, csv([head, ...rows]));
+  };
+
+  // ── Photos ───────────────────────────────────────────────
+  function allPhotos() {
+    return R().flatMap((r) => photosOf(r).map((k) => ({ r, k }))).sort((a, b) => when(b.r).localeCompare(when(a.r)));
+  }
+  function renderPhotos() {
+    const list = allPhotos();
+    $("#photo-count").textContent = `${list.length} ${list.length === 1 ? "photo" : "photos"}`;
+    const grid = $("#all-photos");
+    grid.innerHTML = "";
+    if (!list.length) grid.append(el("p", { class: "muted", text: "No photos yet." }));
+    list.forEach(({ r, k }) => grid.append(lazyImg(k, who(r))));
+  }
+
+  $("#zip").onclick = async () => {
+    const list = allPhotos();
+    if (!list.length) return toast("No photos to download yet.");
+    if (!window.JSZip) return toast("The zip tool didn't load. Check your connection and refresh.");
+    const btn = $("#zip"), status = $("#zip-status");
+    btn.disabled = true;
+    const zip = new JSZip();
+    const anonNo = new Map();
+    let done = 0, failed = 0;
+    for (const { r, k } of list) {
+      let folder;
+      if (r.anonymous) { if (!anonNo.has(r.id)) anonNo.set(r.id, anonNo.size + 1); folder = `Anonymous ${anonNo.get(r.id)}`; }
+      else folder = (r.name || "Unnamed").replace(/[\\/:*?"<>|]/g, "").trim() || "Unnamed";
+      try {
+        const res = await api(`/api/photo?key=${encodeURIComponent(k)}`);
+        if (!res.ok) throw new Error();
+        zip.file(`${folder}/${k.split("/")[1]}`, await res.blob());
+      } catch { failed++; }
+      done++;
+      status.textContent = `Collecting photo ${done} of ${list.length}…`;
+    }
+    status.textContent = "Compressing the zip…";
+    const blob = await zip.generateAsync({ type: "blob" });
+    download(`naisen-photos-${new Date().toISOString().slice(0, 10)}.zip`, blob);
+    status.textContent = failed ? `Downloaded. ${failed} photo(s) couldn't be fetched; try again later.` : "Downloaded.";
+    btn.disabled = false;
+  };
+
+  // ── Contacts ─────────────────────────────────────────────
+  const contacts = () => R().filter((r) => !r.anonymous && r.contact && (r.contact.linkedin || r.contact.email)).sort((a, b) => who(a).localeCompare(who(b)));
+  function renderContacts() {
+    const list = contacts();
+    $("#contact-count").textContent = `${list.length} ${list.length === 1 ? "person" : "people"} left contact details`;
+    const t = $("#contacts");
+    t.innerHTML = "";
+    t.append(el("tr", {}, ["Name", "Role", "Team", "LinkedIn", "Email"].map((h) => el("th", { text: h }))));
+    if (!list.length) t.append(el("tr", {}, el("td", { colspan: 5, class: "muted", text: "No one yet." })));
+    list.forEach((r) => t.append(el("tr", {},
+      el("td", { text: r.name }), el("td", { text: r.role || "" }), el("td", { text: r.team || "" }),
+      el("td", {}, r.contact.linkedin ? el("a", { href: safeUrl(r.contact.linkedin), target: "_blank", rel: "noopener", text: "Profile" }) : ""),
+      el("td", {}, r.contact.email ? el("a", { href: `mailto:${r.contact.email}`, text: r.contact.email }) : ""))));
+  }
+  $("#export-contacts").onclick = () => {
+    const rows = contacts().map((r) => [r.name, r.role, r.team, r.contact.linkedin, r.contact.email]);
+    download("naisen-contacts.csv", csv([["Name", "Role", "Team", "LinkedIn", "Email"], ...rows]));
+  };
+
+  // ── Keepsake ─────────────────────────────────────────────
+  $("#k-build").onclick = async () => {
+    const withAnon = $("#k-anon").checked, withPhotos = $("#k-photos").checked;
+    const starredOnly = $("#k-starred").checked, withPrivate = $("#k-private").checked;
+    const qs = S.qs.filter((q) => withPrivate || q.wall);
+    const list = R().filter((r) => (withAnon || !r.anonymous) && (!starredOnly || r.starred))
+      .sort((a, b) => when(a).localeCompare(when(b)));
+    if (!list.length) return toast("No entries match those options.");
+
+    const status = $("#k-status"), btn = $("#k-build");
+    btn.disabled = true;
+    const root = $("#print-root");
+    root.innerHTML = "";
+    const book = el("div", { id: "keepsake", class: "wrap" },
+      el("section", { class: "k-cover" },
+        el("p", { class: "brand", style: "justify-content:center;margin-bottom:28px", text: S.data.config.appName || "Naisen" }),
+        el("h1", {}, el("span", { class: "double", text: `For ${S.data.config.leaderName}` })),
+        el("p", { class: "muted", text: `Words from ${list.length} ${list.length === 1 ? "colleague" : "colleagues"}` })));
+
+    let n = 0;
+    for (const r of list) {
+      const block = el("section", { class: "k-entry" }, el("h2", { text: who(r) }));
+      const meta = r.anonymous ? "" : [r.role, r.team].filter(Boolean).join(", ");
+      if (meta) block.append(el("p", { class: "muted", style: "margin:0 0 10px", text: meta }));
+      let has = false;
+      qs.forEach((q) => { const t = r.answers?.[q.id]; if (t) { has = true; block.append(el("div", { class: "qa" }, el("small", { text: q.label }), el("p", { text: t }))); } });
+      if (withPhotos && photosOf(r).length) {
+        const pics = el("div", { class: "pics" });
+        for (const k of photosOf(r)) {
+          try { pics.append(el("img", { src: await photoURL(k), alt: "" })); has = true; } catch {}
+        }
+        block.append(pics);
+      }
+      if (has) book.append(block);
+      status.textContent = `Preparing ${++n} of ${list.length}…`;
+    }
+    root.append(book);
+    await Promise.all([...root.querySelectorAll("img")].map((i) => i.complete ? 0 : new Promise((res) => { i.onload = i.onerror = res; })));
+    status.textContent = "";
+    btn.disabled = false;
+    document.body.classList.add("printing");
+    const done = () => { document.body.classList.remove("printing"); window.removeEventListener("afterprint", done); };
+    window.addEventListener("afterprint", done);
+    window.print();
+  };
+
+  // ── Share ────────────────────────────────────────────────
+  function renderShare() {
+    const cfg = S.data.config;
+    const formUrl = `${location.origin}/`;
+    $("#link-form").value = formUrl;
+    $("#link-wall").value = `${location.origin}/wall`;
+    $("#wall-row").classList.toggle("hidden", !cfg.wallEnabled);
+    $("#wall-label").classList.toggle("hidden", !cfg.wallEnabled);
+    const bits = [];
+    bits.push(cfg.closed ? "The book is closed to new entries." : cfg.closesOn ? `Open until ${cfg.closesOn} (end of day, India time).` : "Open, with no closing date set.");
+    bits.push(cfg.accessCodeRequired ? "An access code is required, so include it when you share the link." : "No access code is set, so anyone with the link can write in.");
+    $("#share-info").textContent = bits.join(" ");
+
+    const inv = $("#invite");
+    if (!inv.dataset.touched) {
+      const link = `${formUrl}${cfg.accessCodeRequired ? "\nAccess code: [add your code here]" : ""}`;
+      const tpl = cfg.inviteMessage || "{link}";
+      inv.value = tpl.includes("{link}") ? tpl.replace("{link}", link) : `${tpl}\n\n${link}`;
+      inv.oninput = () => (inv.dataset.touched = "1");
+    }
+
+    const qrBox = $("#qr");
+    qrBox.innerHTML = "";
+    if (window.qrcode) {
+      const qr = qrcode(0, "M");
+      qr.addData(formUrl);
+      qr.make();
+      const src = qr.createDataURL(10, 4);
+      qrBox.append(el("img", { src, alt: `QR code for ${formUrl}` }));
+      $("#qr-dl").href = src;
+    } else qrBox.append(el("p", { class: "muted", text: "The QR tool didn't load. Refresh to try again." }));
+  }
+  document.querySelectorAll("[data-copy]").forEach((b) => {
+    b.onclick = async () => {
+      const v = document.getElementById(b.dataset.copy).value;
+      try { await navigator.clipboard.writeText(v); toast("Copied"); } catch { document.getElementById(b.dataset.copy).select(); toast("Press Ctrl+C to copy"); }
+    };
+  });
+
+  // ── Start ────────────────────────────────────────────────
+  try { S.pw = sessionStorage.getItem(PW_KEY) || ""; } catch {}
+  if (S.pw) load();
+})();
+</script>
+</body>
+</html>

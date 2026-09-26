@@ -1,0 +1,10 @@
+{
+  "name": "naisen",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "A farewell feedback book: public form, memory wall and private dashboard, on Netlify Functions + Netlify Blobs.",
+  "dependencies": {
+    "@netlify/blobs": "^11.1.1"
+  }
+}

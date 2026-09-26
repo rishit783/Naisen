@@ -1,0 +1,561 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>Naisen</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📖</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Gloock&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/styles.css">
+<style>
+  header.intro { padding-bottom: 8px; }
+  header.intro h1 { margin-bottom: 28px; }
+  .letter { max-width: 62ch; font-size: 1.1rem; line-height: 1.7; }
+  .letter p { margin: 0 0 16px; }
+  .letter .greeting { font-weight: 600; color: var(--ink); }
+  .letter ol { list-style: none; counter-reset: pt; margin: 24px 0 28px; padding: 0; }
+  .letter ol li {
+    counter-increment: pt; position: relative; padding: 14px 0 14px 60px;
+    border-top: 1px solid var(--rule);
+  }
+  .letter ol li:last-child { border-bottom: 1px solid var(--rule); }
+  .letter ol li::before {
+    content: counter(pt); position: absolute; left: 6px; top: 6px;
+    font-family: var(--display); font-size: 2.2rem; line-height: 1.2; color: var(--margin);
+  }
+  .letter .signoff { font-family: var(--display); font-size: 1.8rem; color: var(--accent); margin: 24px 0 0; }
+  .contact-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 22px; }
+  .your-turn { background: var(--paper-deep); border-radius: var(--radius); padding: 26px 24px; margin: 48px 0 8px; }
+  .your-turn h2 { margin-bottom: 8px; }
+  .your-turn p { margin: 0; max-width: 62ch; color: var(--ink-soft); }
+
+  section.block { padding: 36px 0 8px; }
+  section.block > h2 { margin-bottom: 6px; }
+  section.block > p.muted { margin: 0 0 18px; max-width: 62ch; }
+
+  .choice { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 16px; }
+  .choice label {
+    position: relative; display: block; cursor: pointer; background: var(--sheet);
+    border: 1.5px solid var(--rule-strong); border-radius: var(--radius); padding: 16px 16px 16px 48px;
+  }
+  .choice input { position: absolute; left: 16px; top: 19px; width: 20px; height: 20px; accent-color: var(--margin); margin: 0; }
+  .choice strong { display: block; font-size: 1.02rem; }
+  .choice span { display: block; font-size: 0.9rem; color: var(--pencil); margin-top: 2px; }
+  .choice label:has(input:checked) { border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px; }
+
+  .q { margin-top: 30px; }
+  .q > label { display: block; font-family: var(--display); font-size: 1.32rem; line-height: 1.3; margin-bottom: 10px; max-width: 34ch; }
+  .q .count { text-align: right; font-size: 0.82rem; color: var(--pencil); margin-top: 4px; min-height: 1.2em; }
+  .q input.word {
+    font-family: var(--display); font-size: 1.7rem; padding: 6px 4px 10px; width: min(100%, 420px);
+    border: none; border-radius: 0; background: transparent;
+    border-bottom: 2px solid var(--ink); box-shadow: 0 4px 0 -2px var(--paper), 0 6px 0 -2px var(--ink);
+  }
+  .q input.word:focus { box-shadow: 0 4px 0 -2px var(--paper), 0 6px 0 -2px var(--margin); border-bottom-color: var(--margin); }
+  .q input.short { font-size: 1.05rem; }
+
+  .drop {
+    display: block; border: 1.5px dashed var(--rule-strong); border-radius: var(--radius); background: var(--sheet);
+    padding: 26px 20px; text-align: center; cursor: pointer;
+  }
+  .drop:hover, .drop.over { border-color: var(--ink); }
+  .drop strong { display: block; font-size: 1.05rem; }
+  .thumbs { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 10px; margin-top: 14px; }
+  .thumb { position: relative; aspect-ratio: 1; border-radius: var(--radius); overflow: hidden; background: var(--paper-deep); }
+  .thumb img { width: 100%; height: 100%; object-fit: cover; }
+  .thumb button {
+    position: absolute; top: 6px; right: 6px; border: none; border-radius: 50%; width: 28px; height: 28px;
+    background: rgba(38,54,60,0.75); color: #fff; font-size: 16px; line-height: 28px; cursor: pointer;
+  }
+
+  .check { display: flex; gap: 12px; align-items: flex-start; margin-top: 16px; cursor: pointer; }
+  .check input { width: 20px; height: 20px; margin-top: 3px; accent-color: var(--margin); flex: none; }
+
+  .send { margin-top: 40px; padding-top: 28px; border-top: 1.5px solid var(--rule-strong); display: flex; flex-wrap: wrap; gap: 16px; align-items: center; }
+  #status { font-size: 0.95rem; }
+  #error { margin-top: 16px; }
+
+  .thanks { padding: 60px 0 20px; }
+  .thanks h1 { margin-bottom: 20px; }
+  .thanks p { font-size: 1.1rem; max-width: 56ch; }
+  .hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+
+  @media (max-width: 560px) {
+    .wrap { padding-top: 32px; }
+    .choice, .grid-2 { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="topbar"><div class="inner"><a class="brand" href="/" id="brand">Naisen</a><nav id="topnav"></nav></div></div>
+<main class="wrap" id="app">
+  <p class="muted" id="loading">Loading…</p>
+</main>
+
+<template id="tpl-form">
+  <header class="intro">
+    <h1><span class="double" id="headline"></span></h1>
+    <div class="letter" id="letter"></div>
+    <div class="contact-row" id="contact-row"></div>
+  </header>
+
+  <div class="your-turn">
+    <h2>Your turn</h2>
+    <p id="form-intro"></p>
+  </div>
+
+  <div id="closed" class="notice hidden" role="status"></div>
+
+  <form id="form" novalidate>
+    <section class="block">
+      <h2>Who's writing?</h2>
+      <p class="muted">Anonymous entries store no name, email, device details or exact time, only the date.</p>
+      <div class="choice" role="radiogroup" aria-label="Who's writing">
+        <label><input type="radio" name="identity" value="anon" checked><strong>Stay anonymous</strong><span>Say it freely.</span></label>
+        <label><input type="radio" name="identity" value="named"><strong>Add my name</strong><span>So I know who to thank.</span></label>
+      </div>
+
+      <div id="named-fields" class="hidden">
+        <div class="grid-2">
+          <label class="field"><span>Your name</span><input type="text" name="name" autocomplete="name" maxlength="120"></label>
+          <label class="field"><span>Role or designation</span><input type="text" name="role" maxlength="120"></label>
+          <label class="field"><span>Team or service line</span>
+            <input type="text" name="team" list="team-list" maxlength="120" id="team-input">
+            <select name="teamSelect" id="team-select" class="hidden"></select>
+            <datalist id="team-list"></datalist>
+          </label>
+          <label class="field"><span>How long we worked together</span>
+            <select name="tenure">
+              <option value="">Choose one</option>
+              <option>Under 1 year</option>
+              <option>1–2 years</option>
+              <option>3–5 years</option>
+              <option>More than 5 years</option>
+            </select>
+          </label>
+        </div>
+      </div>
+    </section>
+
+    <section class="block" id="questions">
+      <h2>The questions</h2>
+      <p class="muted">Answer as many or as few as you like. Your answers are saved on this device as you type, so you can come back to finish.</p>
+    </section>
+
+    <section class="block">
+      <h2>Photos</h2>
+      <p class="muted" id="photo-hint"></p>
+      <label class="drop" id="drop">
+        <strong>Add photos</strong>
+        <span class="muted small">Tap to choose, or drag them here. JPEG, PNG, WebP or iPhone photos.</span>
+        <input type="file" id="photo-input" accept="image/*" multiple class="sr-only">
+      </label>
+      <div class="thumbs" id="thumbs"></div>
+      <p class="muted small">Location and camera details are removed from photos before they're sent. Please don't include client documents, screens or anything confidential.</p>
+    </section>
+
+    <section class="block" id="wall-block">
+      <h2>The memory wall</h2>
+      <p class="muted" id="wall-desc"></p>
+      <label class="check"><input type="checkbox" name="showOnWall"><span>Show my entry on the memory wall. Everything else stays private to <span class="leader"></span>.</span></label>
+    </section>
+
+    <section class="block hidden" id="contact-block">
+      <h2>Stay in touch</h2>
+      <p class="muted">Optional. Only <span class="leader"></span> sees this.</p>
+      <div class="grid-2">
+        <label class="field"><span>LinkedIn profile</span><input type="url" name="linkedin" placeholder="https://linkedin.com/in/…" maxlength="300"></label>
+        <label class="field"><span>Personal email</span><input type="email" name="email" autocomplete="email" maxlength="120"></label>
+      </div>
+    </section>
+
+    <section class="block hidden" id="code-block">
+      <h2>Access code</h2>
+      <p class="muted">You'll find it in the message that brought you here.</p>
+      <label class="field"><span class="sr-only">Access code</span><input type="text" name="accessCode" autocomplete="off" maxlength="100" style="max-width:280px"></label>
+    </section>
+
+    <div class="hp" aria-hidden="true"><label>Website <input type="text" name="website" tabindex="-1" autocomplete="off"></label></div>
+
+    <div id="error" class="notice hidden" role="alert"></div>
+    <div class="send">
+      <button class="btn" type="submit" id="submit">Send my entry</button>
+      <span id="status" class="muted" aria-live="polite"></span>
+    </div>
+  </form>
+</template>
+
+<template id="tpl-thanks">
+  <section class="thanks">
+    <h1><span class="double">Thank you.</span></h1>
+    <p>Your entry has reached <span class="leader"></span>, and every word will be read.</p>
+    <p>Let's stay in touch.</p>
+    <div class="contact-row" id="thanks-contact"></div>
+    <p id="thanks-warn" class="notice hidden"></p>
+    <p id="thanks-wall" class="hidden"><a href="/wall">See the memory wall</a></p>
+  </section>
+</template>
+
+<script>
+(() => {
+  const DRAFT_KEY = "naisen-draft-v1";
+  const app = document.getElementById("app");
+  let CFG = null;
+  const photos = []; // { blob, url }
+
+  const store = {
+    get() { try { return JSON.parse(localStorage.getItem(DRAFT_KEY) || "null"); } catch { return null; } },
+    set(v) { try { localStorage.setItem(DRAFT_KEY, JSON.stringify(v)); } catch {} },
+    clear() { try { localStorage.removeItem(DRAFT_KEY); } catch {} },
+  };
+
+  const $ = (sel, root = document) => root.querySelector(sel);
+
+  async function init() {
+    try {
+      const res = await fetch("/api/config");
+      if (!res.ok) throw new Error();
+      CFG = await res.json();
+    } catch {
+      app.innerHTML = "";
+      const p = document.createElement("p");
+      p.className = "notice";
+      p.textContent = "The page couldn't load. Check your connection and refresh.";
+      app.append(p);
+      return;
+    }
+    document.title = CFG.pageTitle;
+    $("#brand").textContent = CFG.appName || "Naisen";
+    if (CFG.wallEnabled) { const a = document.createElement("a"); a.href = "/wall"; a.textContent = "Memory wall"; $("#topnav").append(a); }
+    render();
+  }
+
+  function render() {
+    app.innerHTML = "";
+    app.append($("#tpl-form").content.cloneNode(true));
+    document.querySelectorAll(".leader").forEach((n) => (n.textContent = CFG.leaderName));
+    $("#headline").textContent = CFG.headline || `${CFG.leaderName} is signing off.`;
+    renderLetter($("#letter"));
+    renderContact($("#contact-row"));
+    $("#form-intro").textContent = CFG.formIntro || "";
+
+    if (CFG.closed) {
+      const c = $("#closed");
+      c.textContent = "Entries are closed now. Thank you to everyone who wrote in.";
+      c.classList.remove("hidden");
+      $("#form").classList.add("hidden");
+      if (CFG.wallEnabled) {
+        const a = document.createElement("p");
+        a.innerHTML = '<a href="/wall">See the memory wall</a>';
+        c.after(a);
+      }
+      return;
+    }
+
+    buildQuestions();
+    buildTeams();
+    $("#photo-hint").textContent = `Up to ${CFG.maxPhotos} photos from our time together: offsites, celebrations, whiteboards, late nights.`;
+
+    if (CFG.wallEnabled) {
+      const shown = CFG.questions.filter((q) => q.wall).map((q) => (q.short || q.id).toLowerCase());
+      const list = shown.length > 1 ? `${shown.slice(0, -1).join(", ")} and ${shown.at(-1)}` : shown[0] || "";
+      $("#wall-desc").textContent = `A shared page where everyone can read each other's memories. If you opt in, it shows your photos and your answers to these questions: ${list}. Your name appears only if you added it.`;
+    } else {
+      $("#wall-block").remove();
+    }
+    if (CFG.accessCodeRequired) $("#code-block").classList.remove("hidden");
+
+    const form = $("#form");
+    form.addEventListener("change", onIdentity);
+    form.addEventListener("input", saveDraft);
+    form.addEventListener("submit", onSubmit);
+    wirePhotos();
+    restoreDraft();
+    onIdentity();
+  }
+
+  function mk(tag, cls, text) { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; }
+
+  function renderLetter(host) {
+    const f = CFG.farewell || {};
+    if (f.greeting) host.append(mk("p", "greeting", f.greeting));
+    (f.opening || []).forEach((t) => host.append(mk("p", null, t)));
+    if (f.points?.length) {
+      const ol = mk("ol");
+      f.points.forEach((t) => ol.append(mk("li", null, t)));
+      host.append(ol);
+    }
+    (f.closing || []).forEach((t) => host.append(mk("p", null, t)));
+    if (f.signoff) host.append(mk("p", "signoff", f.signoff));
+  }
+
+  function renderContact(host) {
+    const c = CFG.contact || {};
+    if (c.linkedin) {
+      const a = mk("a", "btn ghost", "Connect on LinkedIn");
+      a.href = c.linkedin; a.target = "_blank"; a.rel = "noopener";
+      host.append(a);
+    }
+    if (c.email) {
+      const a = mk("a", "btn ghost", c.email);
+      a.href = `mailto:${c.email}`;
+      host.append(a);
+    }
+  }
+
+  function buildQuestions() {
+    const host = $("#questions");
+    CFG.questions.forEach((q) => {
+      const wrap = document.createElement("div");
+      wrap.className = "q";
+      const label = document.createElement("label");
+      label.htmlFor = `a-${q.id}`;
+      label.textContent = q.label;
+      wrap.append(label);
+      let input;
+      if (q.kind === "long") {
+        input = document.createElement("textarea");
+        input.className = "ruled";
+        input.maxLength = 3000;
+        input.rows = 4;
+      } else {
+        input = document.createElement("input");
+        input.type = "text";
+        input.className = q.kind === "word" ? "word" : "short";
+        input.maxLength = q.kind === "word" ? 40 : 300;
+        input.autocomplete = "off";
+        if (q.kind === "word") input.placeholder = "One word";
+      }
+      input.id = `a-${q.id}`;
+      input.name = `answer:${q.id}`;
+      wrap.append(input);
+      if (q.kind === "long") {
+        const count = document.createElement("div");
+        count.className = "count";
+        input.addEventListener("input", () => {
+          const left = 3000 - input.value.length;
+          count.textContent = left < 400 ? `${left} characters left` : "";
+        });
+        wrap.append(count);
+      }
+      host.append(wrap);
+    });
+  }
+
+  function buildTeams() {
+    const teams = CFG.teams || [];
+    if (!teams.length) return;
+    const sel = $("#team-select");
+    const input = $("#team-input");
+    sel.innerHTML = "";
+    ["", ...teams, "Other"].forEach((t) => {
+      const o = document.createElement("option");
+      o.value = t;
+      o.textContent = t || "Choose one";
+      sel.append(o);
+    });
+    sel.classList.remove("hidden");
+    input.classList.add("hidden");
+    input.placeholder = "Type your team";
+    sel.addEventListener("change", () => {
+      input.classList.toggle("hidden", sel.value !== "Other");
+      if (sel.value !== "Other") input.value = "";
+    });
+  }
+
+  function onIdentity() {
+    const named = $("#form").elements.identity.value === "named";
+    $("#named-fields").classList.toggle("hidden", !named);
+    $("#contact-block").classList.toggle("hidden", !named);
+  }
+
+  function collect() {
+    const f = $("#form").elements;
+    const answers = {};
+    CFG.questions.forEach((q) => (answers[q.id] = f[`answer:${q.id}`].value));
+    const sel = $("#team-select");
+    const team = !sel.classList.contains("hidden") && sel.value && sel.value !== "Other" ? sel.value : f.team.value;
+    return {
+      anonymous: f.identity.value !== "named",
+      name: f.name.value, role: f.role.value, team, tenure: f.tenure.value,
+      linkedin: f.linkedin.value, email: f.email.value,
+      showOnWall: !!(f.showOnWall && f.showOnWall.checked),
+      accessCode: f.accessCode.value,
+      website: f.website.value,
+      answers,
+    };
+  }
+
+  function saveDraft() {
+    const d = collect();
+    delete d.website; delete d.accessCode;
+    d.teamSelect = $("#team-select").value;
+    store.set(d);
+  }
+
+  function restoreDraft() {
+    const d = store.get();
+    if (!d) return;
+    const f = $("#form").elements;
+    f.identity.value = d.anonymous === false ? "named" : "anon";
+    ["name", "role", "tenure", "linkedin", "email"].forEach((k) => { if (d[k]) f[k].value = d[k]; });
+    const sel = $("#team-select");
+    if (!sel.classList.contains("hidden") && d.teamSelect) {
+      sel.value = d.teamSelect;
+      sel.dispatchEvent(new Event("change"));
+      if (d.teamSelect === "Other") f.team.value = d.team || "";
+    } else if (d.team) f.team.value = d.team;
+    if (f.showOnWall) f.showOnWall.checked = !!d.showOnWall;
+    CFG.questions.forEach((q) => { if (d.answers?.[q.id]) { f[`answer:${q.id}`].value = d.answers[q.id]; f[`answer:${q.id}`].dispatchEvent(new Event("input")); } });
+  }
+
+  // ── Photos ────────────────────────────────────────────────
+  function wirePhotos() {
+    const input = $("#photo-input");
+    const drop = $("#drop");
+    input.addEventListener("change", () => { addFiles(input.files); input.value = ""; });
+    ["dragenter", "dragover"].forEach((e) => drop.addEventListener(e, (ev) => { ev.preventDefault(); drop.classList.add("over"); }));
+    ["dragleave", "drop"].forEach((e) => drop.addEventListener(e, (ev) => { ev.preventDefault(); drop.classList.remove("over"); }));
+    drop.addEventListener("drop", (ev) => addFiles(ev.dataTransfer.files));
+  }
+
+  async function addFiles(fileList) {
+    const files = [...fileList].filter((f) => f.type.startsWith("image/") || /\.(heic|heif)$/i.test(f.name));
+    for (const file of files) {
+      if (photos.length >= CFG.maxPhotos) { showError(`You can add up to ${CFG.maxPhotos} photos.`); break; }
+      setStatus(`Preparing ${file.name}…`);
+      try {
+        const blob = await compress(file);
+        photos.push({ blob, url: URL.createObjectURL(blob) });
+        hideError();
+      } catch {
+        showError(`“${file.name}” couldn't be read. If it's an iPhone HEIC photo, try choosing it from the Photos library, which converts it automatically, or take a screenshot of it.`);
+      }
+      setStatus("");
+      drawThumbs();
+    }
+  }
+
+  function compress(file) {
+    return new Promise((resolve, reject) => {
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = () => {
+        const max = 1920;
+        const s = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
+        const w = Math.max(1, Math.round(img.naturalWidth * s));
+        const h = Math.max(1, Math.round(img.naturalHeight * s));
+        const c = document.createElement("canvas");
+        c.width = w; c.height = h;
+        const ctx = c.getContext("2d");
+        ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, w, h);
+        ctx.drawImage(img, 0, 0, w, h);
+        URL.revokeObjectURL(url);
+        // Re-encoding through a canvas drops EXIF data, including GPS location.
+        let q = 0.85;
+        const attempt = () => c.toBlob((b) => {
+          if (!b) return reject(new Error("encode"));
+          if (b.size > 2.5e6 && q > 0.45) { q -= 0.1; attempt(); } else resolve(b);
+        }, "image/jpeg", q);
+        attempt();
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("decode")); };
+      img.src = url;
+    });
+  }
+
+  function drawThumbs() {
+    const host = $("#thumbs");
+    host.innerHTML = "";
+    photos.forEach((p, i) => {
+      const d = document.createElement("div");
+      d.className = "thumb";
+      const img = document.createElement("img");
+      img.src = p.url; img.alt = `Photo ${i + 1}`;
+      const b = document.createElement("button");
+      b.type = "button"; b.textContent = "×"; b.setAttribute("aria-label", `Remove photo ${i + 1}`);
+      b.onclick = () => { URL.revokeObjectURL(p.url); photos.splice(i, 1); drawThumbs(); };
+      d.append(img, b);
+      host.append(d);
+    });
+  }
+
+  // ── Submit ────────────────────────────────────────────────
+  function setStatus(t) { const s = $("#status"); if (s) s.textContent = t; }
+  function showError(t) { const e = $("#error"); e.textContent = t; e.classList.remove("hidden"); }
+  function hideError() { const e = $("#error"); if (e) e.classList.add("hidden"); }
+
+  async function onSubmit(ev) {
+    ev.preventDefault();
+    hideError();
+    const data = collect();
+    const hasText = Object.values(data.answers).some((v) => v.trim());
+    if (!hasText && !photos.length) { showError("Answer at least one question or add a photo before sending."); return; }
+    if (CFG.accessCodeRequired && !data.accessCode.trim()) { showError("Enter the access code from your invite."); return; }
+
+    const btn = $("#submit");
+    btn.disabled = true;
+    setStatus("Sending your entry…");
+    try {
+      const res = await fetch("/api/submit", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ ...data, photoCount: photos.length }),
+      });
+      const out = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(out.error || "Your entry couldn't be sent. Try again in a moment.");
+
+      let failed = 0;
+      if (out.uploadToken) {
+        for (let i = 0; i < photos.length; i++) {
+          setStatus(`Uploading photo ${i + 1} of ${photos.length}…`);
+          const ok = await uploadPhoto(out.id, out.uploadToken, photos[i].blob);
+          if (!ok) failed++;
+        }
+        if (failed) fetch(`/api/upload?id=${out.id}&token=${out.uploadToken}&done=1`, { method: "POST" }).catch(() => {});
+      }
+      store.clear();
+      showThanks(failed);
+    } catch (e) {
+      showError(e.message);
+      setStatus("");
+      btn.disabled = false;
+    }
+  }
+
+  async function uploadPhoto(id, token, blob) {
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const r = await fetch(`/api/upload?id=${encodeURIComponent(id)}&token=${encodeURIComponent(token)}`, {
+          method: "POST", headers: { "content-type": blob.type || "image/jpeg" }, body: blob,
+        });
+        if (r.ok) return true;
+        if (r.status < 500) return false;
+      } catch {}
+    }
+    return false;
+  }
+
+  function showThanks(failed) {
+    app.innerHTML = "";
+    app.append($("#tpl-thanks").content.cloneNode(true));
+    document.querySelectorAll(".leader").forEach((n) => (n.textContent = CFG.leaderName));
+    renderContact($("#thanks-contact"));
+    if (failed) {
+      const w = $("#thanks-warn");
+      w.textContent = `Your words were saved, but ${failed} photo${failed > 1 ? "s" : ""} didn't upload. You can send them in a new entry.`;
+      w.classList.remove("hidden");
+    }
+    if (CFG.wallEnabled) $("#thanks-wall").classList.remove("hidden");
+    window.scrollTo(0, 0);
+  }
+
+  init();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>Memory wall: Naisen</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📖</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Gloock&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/styles.css">
+<style>
+  header { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 16px; padding-bottom: 24px; border-bottom: 1.5px solid var(--rule-strong); margin-bottom: 28px; }
+  header p { margin: 12px 0 0; }
+  .wall { columns: 3 300px; column-gap: 20px; }
+  .entry {
+    break-inside: avoid; margin: 0 0 20px; background: var(--sheet); border: 1.5px solid var(--rule);
+    border-radius: var(--radius); padding: 20px 20px 16px;
+  }
+  .entry .word { font-family: var(--display); font-size: 1.9rem; line-height: 1.2; margin: 0 0 12px; }
+  .entry .headline { font-family: var(--display); font-size: 1.25rem; line-height: 1.35; margin: 0 0 12px; }
+  .entry .qa { margin: 0 0 12px; }
+  .entry .qa small { display: block; color: var(--pencil); font-size: 0.82rem; margin-bottom: 2px; }
+  .entry .qa p { margin: 0; white-space: pre-line; }
+  .entry .pics { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; margin: 4px 0 12px; }
+  .entry .pics img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 4px; background: var(--paper-deep); cursor: zoom-in; }
+  .entry .pics img:only-child { grid-column: span 2; aspect-ratio: auto; }
+  .entry footer { border-top: 1px solid var(--rule); padding-top: 10px; font-size: 0.9rem; color: var(--pencil); }
+  .entry footer strong { color: var(--ink); font-weight: 600; }
+  .empty { max-width: 52ch; }
+  dialog { border: none; padding: 0; background: transparent; max-width: 96vw; max-height: 92vh; }
+  dialog::backdrop { background: rgba(38, 54, 60, 0.82); }
+  dialog img { max-width: 96vw; max-height: 92vh; border-radius: 4px; }
+</style>
+</head>
+<body>
+<div class="topbar"><div class="inner"><a class="brand" href="/">Naisen</a><nav><a href="/">Write an entry</a></nav></div></div>
+<main class="wrap-wide">
+  <header>
+    <div>
+      <h1><span class="double">The memory wall</span></h1>
+      <p class="muted" id="sub">Loading…</p>
+    </div>
+  </header>
+  <div class="wall" id="wall"></div>
+</main>
+<dialog id="viewer"><img alt=""></dialog>
+
+<script>
+(async () => {
+  const wall = document.getElementById("wall");
+  const sub = document.getElementById("sub");
+  const viewer = document.getElementById("viewer");
+  viewer.addEventListener("click", () => viewer.close());
+
+  const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; };
+
+  let data;
+  try {
+    const [r, c] = await Promise.all([fetch("/api/wall"), fetch("/api/config")]);
+    if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || "The memory wall couldn't load.");
+    data = await r.json();
+    const cfg = c.ok ? await c.json() : null;
+    if (cfg) { document.title = `Memory wall: ${cfg.appName || "Naisen"}`; document.querySelector(".brand").textContent = cfg.appName || "Naisen"; }
+  } catch (e) {
+    sub.textContent = e.message;
+    return;
+  }
+
+  const n = data.entries.length;
+  sub.textContent = n ? `${n} ${n === 1 ? "person has" : "people have"} shared a memory.` : "";
+  if (!n) {
+    const p = el("p", "empty", "No memories here yet. Write an entry and tick “Show my entry on the memory wall” to be the first.");
+    wall.append(p);
+    return;
+  }
+
+  const byId = Object.fromEntries(data.questions.map((q) => [q.id, q]));
+  const wordQ = data.questions.find((q) => q.kind === "word");
+  const headQ = data.questions[0];
+
+  for (const e of data.entries) {
+    const card = el("article", "entry");
+    if (wordQ && e.answers[wordQ.id]) {
+      const w = el("p", "word");
+      w.append(el("span", "double", e.answers[wordQ.id]));
+      card.append(w);
+    }
+    if (headQ && headQ.id !== wordQ?.id && e.answers[headQ.id]) card.append(el("p", "headline", `“${e.answers[headQ.id]}”`));
+
+    for (const [id, text] of Object.entries(e.answers)) {
+      if (id === wordQ?.id || id === headQ?.id) continue;
+      const qa = el("div", "qa");
+      qa.append(el("small", null, byId[id]?.label || ""), el("p", null, text));
+      card.append(qa);
+    }
+
+    if (e.photos.length) {
+      const pics = el("div", "pics");
+      e.photos.forEach((key) => {
+        const img = el("img");
+        img.loading = "lazy";
+        img.alt = "Shared photo";
+        img.src = `/api/photo?key=${encodeURIComponent(key)}`;
+        img.onclick = () => { viewer.querySelector("img").src = img.src; viewer.showModal(); };
+        pics.append(img);
+      });
+      card.append(pics);
+    }
+
+    const f = el("footer");
+    if (e.name) {
+      f.append(el("strong", null, e.name));
+      if (e.team) f.append(document.createTextNode(`, ${e.team}`));
+    } else f.append(document.createTextNode("Anonymous"));
+    card.append(f);
+    wall.append(card);
+  }
+})();
+</script>
+</body>
+</html>
